@@ -1,0 +1,199 @@
+API CALLS
+
+@app.get("/movies")
+def get_all_movies(db:Session = Depends(get_session)):
+    return db.query(MovieModel).all()
+
+@app.get("/movie/{id}")
+def get_movie(id:int,db:Session = Depends(get_session)):
+    db_movie = db.query(MovieModel).filter(MovieModel.id==id).first()
+    if db_movie is None:
+        raise HTTPException(status_code=404,detail="No movie found")
+    return db_movie
+
+@app.get("/movie/title/{title}")
+def get_movie(title:str,db:Session = Depends(get_session)):
+    db_movie = db.query(MovieModel).filter(MovieModel.title == title.capitalize()).first()
+    if db_movie is None:
+        raise HTTPException(status_code=404,detail="Movie not found")
+    return db_movie
+
+@app.get("/shows")
+def get_all_shows(db:Session = Depends(get_session)):
+    return db.query(ShowModel).all()
+
+@app.get("/shows/{movie_id}")
+def get_shows_for_movie(movie_id:int,db:Session = Depends(get_session)):
+    db_shows = db.query(ShowModel).filter(ShowModel.movie_id == movie_id).all()
+    if db_shows is None:
+        raise HTTPException(status_code=404,detail="No show found")
+    return db_shows
+
+@app.get("/shows/screen/{screen_id}")
+def get_shows_by_screen(screen_id:int,db:Session = Depends(get_session)):
+    db_shows = db.query(ShowModel).filter(ShowModel.screen_id==screen_id).all()
+    if db_shows is None:
+        raise HTTPException(status_code=404,detail="No shows found")
+    return db_shows
+
+@app.get("/screens")
+def get_screens(db:Session = Depends(get_session)):
+    return db.query(ScreenModel).all()
+
+@app.get("/screen/{id}")
+def get_screen(id:int,db:Session = Depends(get_session)):
+    db_screen = db.query(ScreenModel).filter(ScreenModel.id == id).first()
+    if db_screen is None:
+        raise HTTPException(status_code=404,detail="No screens found")
+    return db_screen
+
+@app.get("/screen/theatre/{theatre_id}")
+def get_screens_of_theatre(theatre_id:int,db:Session = Depends(get_session)):
+    db_screens = db.query(ScreenModel).filter(ScreenModel.theatre_id==theatre_id).all()
+    if db_screens is None:
+        raise HTTPException(status_code=404,detail="No screens found")
+    return db_screens
+
+@app.get("/theatres")
+def get_theatres(db:Session = Depends(get_session)):
+    return db.query(TheatreModel).all()
+
+@app.get("/theatre/{id}")
+def get_theatre(id:int,db:Session = Depends(get_session)):
+    db_theatre = db.query(TheatreModel).filter(TheatreModel.id == id).first()
+    if db_theatre is None:
+        raise HTTPException(status_code=404,detail="No theatres found")
+    return db_theatre
+
+@app.get("/theatres/{city}")
+def get_theatre(city:str,db:Session = Depends(get_session)):
+    db_theatres = db.query(TheatreModel).filter(TheatreModel.city == city.capitalize()).all()
+    if db_theatres is None:
+        raise HTTPException(status_code=404,detail="No theatres found")
+    return db_theatres
+
+
+
+
+---------------------------------------------------------------------------------------------------------
+
+SERVICE CALLS
+
+def get_movies():
+    try:
+        resp = requests.get(url=f"{API_URL}/movies")
+        resp.raise_for_status()
+        resp_movies = resp.json()
+        movies = [MovieModel(**movie) for movie in resp_movies]
+        return movies
+    except Exception as e:
+        return []
+
+def get_movie(title:str):
+    try:
+        resp = requests.get(url=f"{API_URL}/movie/title/{title}")
+        resp.raise_for_status()
+        resp = resp.json()
+        # print(resp)
+        return MovieModel(**resp)
+    except Exception as e:
+        return "Movie not found"
+
+def get_movie_by_id(id:int):
+    try:
+        resp = requests.get(url=f"{API_URL}/movie/{id}")
+        resp.raise_for_status()
+        resp = resp.json()
+        # print(resp)
+        return MovieModel(**resp)
+    except Exception as e:
+        return "Movie not found"
+
+def get_shows():
+    try:
+        resp = requests.get(url=f"{API_URL}/shows")
+        resp.raise_for_status()
+        resp = resp.json()
+        shows = [ShowModel(**show) for show in resp]
+        return shows
+    except Exception as e:
+        return "No shows found"
+
+def get_shows_for_movie(movie_id:int):
+    try:
+        resp = requests.get(url=f"{API_URL}/shows/{movie_id}")
+        resp.raise_for_status()
+        resp = resp.json()
+        shows = [ShowModel(**show) for show in resp]
+        # show = ShowModel(**resp)
+        return  shows
+    except Exception as e:
+        return "No shows found"
+
+def get_screens():
+    try:
+        resp = requests.get(url=f"{API_URL}/screens")
+        resp.raise_for_status()
+        resp = resp.json()
+        screens = [ScreenModel(**screen) for screen in resp]
+        return screens
+    except Exception as e:
+        return "No shows found"
+
+def get_screen(id:int):
+    try:
+        resp = requests.get(url=f"{API_URL}/screen/{id}")
+        resp.raise_for_status()
+        resp = resp.json()
+        return ScreenModel(**resp)
+    except Exception as e:
+        return "No screens found"
+
+def get_theatres():
+    try:
+        resp = requests.get(url=f"{API_URL}/theatres")
+        resp.raise_for_status()
+        resp = resp.json()
+        theatres = [TheatreModel(**theatre) for theatre in resp]
+        return theatres
+    except Exception as e:
+        return "No shows found"
+
+def get_theatre(id:int):
+    try:
+        resp = requests.get(url=f"{API_URL}/theatre/{id}")
+        resp.raise_for_status()
+        resp = resp.json()
+        return TheatreModel(**resp)
+    except Exception as e:
+        return "No theatre found"
+
+def get_theatres_by_city(city:str):
+    try:
+        resp = requests.get(url=f"{API_URL}/theatres/{city}")
+        resp.raise_for_status()
+        resp = resp.json()
+        theatres = [TheatreModel(**theatre) for theatre in resp]
+        return theatres
+    except Exception as e:
+        return "No theatres found"
+
+def get_screens_by_theatre(theatre_id:int):
+    try:
+        resp = requests.get(f"{API_URL}/screen/theatre/{theatre_id}")
+        resp.raise_for_status()
+        resp = resp.json()
+        screens = [ScreenModel(**screen) for screen in resp]
+        return screens
+    except Exception as e:
+        return "No theatres found"
+
+def get_shows_by_screen(screen_id:int):
+    try:
+        resp = requests.get(f"{API_URL}/shows/screen/{screen_id}")
+        resp.raise_for_status()
+        resp = resp.json()
+        shows = [ShowModel(**show) for show in resp]
+        return shows
+    except Exception as e:
+        return "No shows found"
