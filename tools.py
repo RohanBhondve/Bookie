@@ -1,4 +1,6 @@
-from api_service import get_shows_for_movie_with_theatre,get_theatres_by_movie_id,get_seats_for_show,get_theatre_by_name,get_movies_by_title,get_all_movies,get_tickets,book_tickets
+from api_service import get_shows_for_movie_with_theatre, get_theatres_by_movie_id, get_seats_for_show, \
+    get_theatre_by_name, get_movies_by_title, get_all_movies, get_tickets, book_tickets, get_shows_by_time, \
+    get_movies_by_theater,get_theaters_by_city,get_movies_by_theater,get_shows_by_time,get_movies_by_language,get_movies_by_genre
 from langchain.tools import tool
 from langchain_core.messages import ToolMessage
 from langchain.agents.middleware import wrap_tool_call
@@ -288,6 +290,136 @@ def select_seats(seat_ids:list[int]):
         "status": "success",
         "selected_seats": seat_ids
     }
+
+@tool
+def show_theatres_by_city(city:str):
+    """
+    Purpose:
+    Retrieve all theatres from the given city.
+
+    When to call:
+    - When the user wants to see all the theatres from their city.
+
+    After calling:
+    - If one or more theatres are returned, present them to the user and ask them to choose one.
+    - If no theatres are found, inform the user that the selected movie is not currently playing.
+
+    Returns:
+    A list of theatres from a city.
+    """
+    try:
+        theatres = get_theaters_by_city(city)
+        if not theatres:
+            return "No theatres found"
+        return theatres
+    except Exception:
+        return "Sorry, I couldn't reach the booking service right now."
+
+@tool
+def show_movies_by_theatre(theatre_id:int):
+    """
+    Purpose:
+    Search for movies being showing at a theatre.
+
+    When to call:
+    - When theater is selected
+    - When you need to find the movies being shown at a particular theater
+
+    After calling:
+    - If exactly one movie is returned, ask the user to confirm the movie before calling select_movie().
+    - If multiple movies are returned, present the options and ask the user to choose one.
+    - If no movies are found, inform the user and ask them to try another title.
+
+    Returns:
+    A list of movies being shown at selected theater.
+    """
+    try:
+        movies = get_movies_by_theater(theatre_id)
+        if not movies:
+            return "No movies found"
+        return movies
+    except Exception:
+        return "Sorry, I couldn't reach the booking service right now."
+
+@tool
+def find_shows_by_time(time:str):
+    """
+    Purpose:
+    Retrieve all available shows for a particular time. time parameter uses 24h clock.
+
+    When to call:
+    - When the user wants to view available shows for a particular time.
+
+    After calling:
+    - If one or more shows are returned, present the available show timings to the user and ask them to choose one.
+    - If no shows are available, inform the user that there are no scheduled shows for the selected movie at the selected theatre.
+
+    Returns:
+    A list of show,movie and theater details for all available shows at a particular time."""
+    try:
+        shows = get_shows_by_time(time)
+        if not shows:
+            return "No shows found"
+        return shows
+    except Exception:
+        return "Sorry, I couldn't reach the booking service right now."
+
+@tool
+def get_movies_from_language(language:str):
+    """
+    Purpose:
+    Search for movies whose language matches the given language.
+
+    When to call:
+    - When the user specifies a language to watch movie in.
+
+    Do not call:
+    - If the user only wants to browse all available movies. Use get_movies() instead.
+
+    After calling:
+    - If exactly one movie is returned, ask the user to confirm the movie before calling select_movie().
+    - If multiple movies are returned, present the options and ask the user to choose one.
+    - If no movies are found, inform the user and ask them to try another title.
+
+    Returns:
+    A list of matching movies.
+    """
+    try:
+        movies = get_movies_by_language(language)
+        if not movies:
+            return "No movies found"
+        return movies
+    except Exception:
+        return "Sorry, I couldn't reach the booking service right now."
+
+@tool
+def get_movies_from_genre(genre:str):
+    """
+    Purpose:
+    Search for movies whose description matches or partially matches the given genre.
+
+    When to call:
+    - When the user specifies a movie genre.
+    - When you need to find the movie the user wants to watch.
+
+    Do not call:
+    - If the user only wants to browse all available movies. Use get_movies() instead.
+
+    After calling:
+    - If exactly one movie is returned, ask the user to confirm the movie before calling select_movie().
+    - If multiple movies are returned, present the options and ask the user to choose one.
+    - If no movies are found, inform the user and ask them to try another title.
+
+    Returns:
+    A list of matching movies.
+    """
+    try:
+        movies = get_movies_by_genre(genre)
+        if not movies:
+            return "No movies found"
+        return movies
+    except Exception:
+        return "Sorry, I couldn't reach the booking service right now."
 
 @tool
 def book_movie_tickets():

@@ -5,12 +5,13 @@ import requests
 from database_models import TicketModel
 from models import MovieModel, ShowModel, ScreenModel, TheatreModel, SeatsResponse, BookingRequest, BookingResponse, \
     TicketResponse
+from datetime import time,datetime
 
 API_URL = "http://127.0.0.1:8000"
 
 def get_theatres_by_movie_id(movie_id:int):
     try:
-        resp = requests.get(f"{API_URL}/movie/theatres/{movie_id}")
+        resp = requests.get(f"{API_URL}/movies/{movie_id}/theatres")
         resp.raise_for_status()
         resp = resp.json()
         # theatres = [TheatreModel(**t) for t in resp]
@@ -22,7 +23,7 @@ def get_theatres_by_movie_id(movie_id:int):
 
 def get_all_movies():
     try:
-        resp = requests.get(f"{API_URL}/search/movies")
+        resp = requests.get(f"{API_URL}/movies")
         resp.raise_for_status()
         resp = resp.json()
         # movies = [MovieModel(**movie) for movie in resp]
@@ -34,7 +35,7 @@ def get_all_movies():
 
 def get_movies_by_title(title:str):
     try:
-        resp = requests.get(url=f"{API_URL}/search/movie/{title}")
+        resp = requests.get(url=f"{API_URL}/movies/search/{title}")
         resp.raise_for_status()
         resp = resp.json()
         # print(resp)
@@ -47,7 +48,7 @@ def get_movies_by_title(title:str):
 
 def get_theatre_by_name(name:str):
     try:
-        resp = requests.get(url=f"{API_URL}/theatre/{name}")
+        resp = requests.get(url=f"{API_URL}/theatres/name/{name}")
         resp.raise_for_status()
         resp = resp.json()
         # return TheatreModel(**resp)
@@ -59,7 +60,7 @@ def get_theatre_by_name(name:str):
 
 def get_shows_for_movie_with_theatre(movie_id:int,theatre_id:int):
     try:
-        resp = requests.get(f"{API_URL}/shows/{movie_id}/{theatre_id}")
+        resp = requests.get(f"{API_URL}/movies/{movie_id}/theatres/{theatre_id}/shows")
         resp.raise_for_status()
         resp = resp.json()
         # shows = [ShowModel(**show) for show in resp]
@@ -71,7 +72,7 @@ def get_shows_for_movie_with_theatre(movie_id:int,theatre_id:int):
 
 def get_seats_for_show(show_id:int):
     try:
-        resp = requests.get(f"{API_URL}/seats/show/{show_id}")
+        resp = requests.get(f"{API_URL}/shows/{show_id}/seats")
         resp.raise_for_status()
         resp = resp.json()
         # seats = [SeatsResponse(**seat) for seat in resp]
@@ -84,7 +85,7 @@ def get_seats_for_show(show_id:int):
 
 def get_theaters_by_city(city:str):
     try:
-        resp = requests.get(f"{API_URL}/theatres/{city}")
+        resp = requests.get(f"{API_URL}/theatres/city/{city}")
         resp.raise_for_status()
         resp = resp.json()
         return resp
@@ -95,7 +96,41 @@ def get_theaters_by_city(city:str):
 
 def get_movies_by_theater(theater_id:int):
     try:
-        resp = requests.get(f"{API_URL}/theater/movie/{theater_id}")
+        resp = requests.get(f"{API_URL}/theatres/{theater_id}/movies")
+        resp.raise_for_status()
+        resp = resp.json()
+        return resp
+    except requests.HTTPError:
+        return []
+    except requests.RequestException as e:
+        raise Exception(f"Failed to connect to api due to {e}")
+
+def get_shows_by_time(target_time:str):
+    try:
+        t = datetime.strptime(target_time,"%H:%M").time()
+        resp = requests.get(f"{API_URL}/time/{t}/shows")
+        resp.raise_for_status()
+        resp = resp.json()
+        return resp
+    except requests.HTTPError:
+        return []
+    except requests.RequestException as e:
+        raise Exception(f"Failed to connect to api due to {e}")
+
+def get_movies_by_language(language:str):
+    try:
+        resp = requests.get(f"{API_URL}/movies/search/language/{language}")
+        resp.raise_for_status()
+        resp = resp.json()
+        return resp
+    except requests.HTTPError:
+        return []
+    except requests.RequestException as e:
+        raise Exception(f"Failed to connect to api due to {e}")
+
+def get_movies_by_genre(genre:str):
+    try:
+        resp = requests.get(f"{API_URL}/movies/search/genre/{genre}")
         resp.raise_for_status()
         resp = resp.json()
         return resp
@@ -107,7 +142,7 @@ def get_movies_by_theater(theater_id:int):
 def book_tickets(req:BookingRequest):
     try:
         json = req.model_dump()
-        resp = requests.post(f"{API_URL}/book",json=json)
+        resp = requests.post(f"{API_URL}/bookings",json=json)
         resp.raise_for_status()
         resp = resp.json()
         # return BookingResponse(**resp)
@@ -119,7 +154,7 @@ def book_tickets(req:BookingRequest):
 
 def get_tickets(booking_id:int):
     try:
-        resp = requests.get(url=f"{API_URL}/tickets/{booking_id}")
+        resp = requests.get(url=f"{API_URL}/bookings/{booking_id}/tickets")
         resp.raise_for_status()
         resp = resp.json()
         # return [TicketResponse(**ticket) for ticket in resp]

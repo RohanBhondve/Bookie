@@ -1,3 +1,6 @@
+import datetime
+from datetime import timedelta,datetime,time
+
 from fastapi import FastAPI,Depends,HTTPException
 from sqlalchemy.orm import Session
 from database_models import MovieModel, ShowModel, ScreenModel, TheatreModel, Base, SeatModel, TicketModel, \
@@ -19,11 +22,11 @@ def get_session():
         db.close()
         
 
-@app.get("/greet")
+@app.get("/health")
 def greet():
     return "hello"
 
-@app.get("/movie/theatres/{movie_id}")
+@app.get("/movies/{movie_id}/theatres")
 def get_theatres_by_movie_id(movie_id:int,db:Session = Depends(get_session)):
     theatres = (
         db.query(TheatreModel)
@@ -44,21 +47,21 @@ def get_all_movies(db:Session = Depends(get_session)):
         raise HTTPException(status_code=404,detail="No movies available")
     return movies
 
-@app.get("/movie/{title}")
+@app.get("/movies/search/{title}")
 def get_movie(title:str,db:Session = Depends(get_session)):
     db_movie = db.query(MovieModel).filter(MovieModel.title.ilike(f"%{title}%")).all()
     if db_movie is None:
         raise HTTPException(status_code=404,detail="Movie not found")
     return db_movie
 
-@app.get("/theatre/{name}")
+@app.get("/theatres/name/{name}")
 def get_theatre(name:str,db:Session = Depends(get_session)):
     db_theatres = db.query(TheatreModel).filter(TheatreModel.name == name.capitalize()).first()
     if db_theatres is None:
         raise HTTPException(status_code=404,detail="No theatres found")
     return db_theatres
 
-@app.get("/shows/{movie_id}/{theatre_id}")
+@app.get("/movies/{movie_id}/theatres/{theatre_id}/shows")
 def get_shows_for_movie_with_theatre(
     movie_id: int,
     theatre_id: int,
@@ -82,7 +85,7 @@ def get_shows_for_movie_with_theatre(
 
     return shows
 
-@app.get("/seats/show/{show_id}")
+@app.get("/shows/{show_id}/seats")
 def get_seats_for_show(show_id: int, db: Session = Depends(get_session)):
 
     show = (
@@ -128,7 +131,7 @@ def get_seats_for_show(show_id: int, db: Session = Depends(get_session)):
 
     return response
 
-@app.get("/theatres/{city}")
+@app.get("/theatres/city/{city}")
 def get_theatres_by_city(city:str,db:Session = Depends(get_session)):
 
     theatres = (
@@ -141,7 +144,7 @@ def get_theatres_by_city(city:str,db:Session = Depends(get_session)):
         raise HTTPException(status_code=404,detail="No theatres found")
     return theatres
 
-@app.get("/theater/movie/{theater_id}")
+@app.get("/theatres/{theater_id}/movies")
 def get_movies_by_theater(theater_id:int, db:Session = Depends(get_session)):
     movies = (
         db.query(MovieModel)
@@ -156,7 +159,52 @@ def get_movies_by_theater(theater_id:int, db:Session = Depends(get_session)):
         return "No movies found"
     return movies
 
-@app.post("/book")
+@app.get("/time/{target_time}/shows")
+def get_shows_by_time(target_time: time, window_minutes: int = 60, db: Session = Depends(get_session)):
+    target = datetime.combine(datetime.today(), target_time)
+    start = (target - timedelta(minutes=window_minutes)).time()
+    end = (target + timedelta(minutes=window_minutes)).time()
+
+    shows = (
+        db.query(ShowModel,MovieModel,TheatreModel)
+        .join(MovieModel, ShowModel.movie_id == MovieModel.id)
+        .join(ScreenModel, ShowModel.screen_id == ScreenModel.id)
+        .join(TheatreModel, ScreenModel.theatre_id == TheatreModel.id)
+        .filter(
+            ShowModel.start_time >= start,
+            ShowModel.start_time <= end
+        )
+        .all()
+    )
+    if not shows:
+        return "No shows found"
+    return [dict(show._mapping) for show in shows]
+
+@app.get("/movies/search/language/{language}")
+def get_movies_by_language(language:str, db:Session = Depends(get_session)):
+    movies = (
+        db.query(MovieModel)
+        .filter(MovieModel.language==language)
+        .all()
+    )
+
+    if not movies:
+        return "No movies found"
+    return movies
+
+@app.get("/movies/search/genre/{genre}")
+def get_movies_by_genre(genre:str, db:Session = Depends(get_session)):
+    movies = (
+        db.query(MovieModel)
+        .filter(MovieModel.description.ilike(f"%{genre}%"))
+        .all()
+    )
+
+    if not movies:
+        return "No movies found"
+    return movies
+
+@app.post("/bookings")
 def book_seats(
     request:BookingRequest,
     db: Session = Depends(get_session)
@@ -278,7 +326,7 @@ def book_seats(
         "booked_seats": request.seat_ids
     }
 
-@app.get("/tickets/{booking_id}")
+@app.get("/bookings/{booking_id}/tickets")
 def get_tickets(booking_id:int,db:Session = Depends(get_session)):
     tickets = (
         db.query(TicketModel.id,TicketModel.show_id,TicketModel.seat_id,TicketModel.ticket_price,SeatModel.row_name,SeatModel.seat_no)
