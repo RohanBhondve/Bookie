@@ -128,6 +128,34 @@ def get_seats_for_show(show_id: int, db: Session = Depends(get_session)):
 
     return response
 
+@app.get("/theatres/{city}")
+def get_theatres_by_city(city:str,db:Session = Depends(get_session)):
+
+    theatres = (
+        db.query(TheatreModel)
+        .filter(TheatreModel.city==city)
+        .all()
+    )
+
+    if not theatres:
+        raise HTTPException(status_code=404,detail="No theatres found")
+    return theatres
+
+@app.get("/theater/movie/{theater_id}")
+def get_movies_by_theater(theater_id:int, db:Session = Depends(get_session)):
+    movies = (
+        db.query(MovieModel)
+        .join(ShowModel, MovieModel.id == ShowModel.movie_id)
+        .join(ScreenModel, ShowModel.screen_id == ScreenModel.id)
+        .filter(ScreenModel.theatre_id == theater_id)
+        .distinct()
+        .all()
+    )
+
+    if not movies:
+        return "No movies found"
+    return movies
+
 @app.post("/book")
 def book_seats(
     request:BookingRequest,

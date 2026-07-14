@@ -22,7 +22,7 @@ def get_theatres_by_movie_id(movie_id:int):
 
 def get_all_movies():
     try:
-        resp = requests.get(f"{API_URL}/movies")
+        resp = requests.get(f"{API_URL}/search/movies")
         resp.raise_for_status()
         resp = resp.json()
         # movies = [MovieModel(**movie) for movie in resp]
@@ -34,7 +34,7 @@ def get_all_movies():
 
 def get_movies_by_title(title:str):
     try:
-        resp = requests.get(url=f"{API_URL}/movie/{title}")
+        resp = requests.get(url=f"{API_URL}/search/movie/{title}")
         resp.raise_for_status()
         resp = resp.json()
         # print(resp)
@@ -75,6 +75,29 @@ def get_seats_for_show(show_id:int):
         resp.raise_for_status()
         resp = resp.json()
         # seats = [SeatsResponse(**seat) for seat in resp]
+        return resp
+    except requests.HTTPError:
+        return []
+    except requests.RequestException as e:
+        raise Exception(f"Failed to connect to api due to {e}")
+
+
+def get_theaters_by_city(city:str):
+    try:
+        resp = requests.get(f"{API_URL}/theatres/{city}")
+        resp.raise_for_status()
+        resp = resp.json()
+        return resp
+    except requests.HTTPError:
+        return []
+    except requests.RequestException as e:
+        raise Exception(f"Failed to connect to api due to {e}")
+
+def get_movies_by_theater(theater_id:int):
+    try:
+        resp = requests.get(f"{API_URL}/theater/movie/{theater_id}")
+        resp.raise_for_status()
+        resp = resp.json()
         return resp
     except requests.HTTPError:
         return []
