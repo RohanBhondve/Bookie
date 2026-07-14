@@ -5,8 +5,13 @@ from langchain.agents.middleware import wrap_tool_call
 
 from models import BookingRequest
 
-decision_history = {
-    "user_id" : 1
+booking_state = {
+    "user_id" : 1,
+    "movie_id": None,
+    "theatre_id":None,
+    "show_id":None,
+    "seat_ids":None,
+    "booking_ids":[]
 }
 
 @tool
@@ -85,7 +90,7 @@ def select_movie(movie_id:int):
     Returns:
     Confirmation that the movie has been stored in the booking state.
     """
-    decision_history["movie_id"] = movie_id
+    booking_state["movie_id"] = movie_id
     return {
         "status": "success",
         "selected_movie": movie_id
@@ -115,7 +120,7 @@ def get_theatres_for_movie():
     A list of theatres showing the selected movie.
     """
     try:
-        theatres = get_theatres_by_movie_id(decision_history["movie_id"])
+        theatres = get_theatres_by_movie_id(booking_state["movie_id"])
         if not theatres:
             return "No theatres found"
         return  theatres
@@ -147,7 +152,7 @@ def select_theatre(theatre_id:int):
         Returns:
         Confirmation that the theatre has been stored in the booking state.
         """
-    decision_history["theatre_id"] = theatre_id
+    booking_state["theatre_id"] = theatre_id
     return {
         "status": "success",
         "selected_theater": theatre_id
@@ -178,7 +183,7 @@ def get_shows_by_movie_and_theatre():
     A list of available shows for the selected movie at the selected theatre.
     """
     try:
-        shows = get_shows_for_movie_with_theatre(movie_id=decision_history["movie_id"],theatre_id=decision_history["theatre_id"])
+        shows = get_shows_for_movie_with_theatre(movie_id=booking_state["movie_id"], theatre_id=booking_state["theatre_id"])
         if not shows:
             return "No shows found"
         return shows
@@ -211,7 +216,7 @@ def select_show(show_id:int):
         Returns:
         Confirmation that the show has been stored in the booking state.
         """
-    decision_history["show_id"] = show_id
+    booking_state["show_id"] = show_id
     return {
         "status": "success",
         "selected_show": show_id
@@ -244,7 +249,7 @@ def get_seats_by_show():
     A list of available seats for the selected show.
     """
     try:
-        seats = get_seats_for_show(decision_history["show_id"])
+        seats = get_seats_for_show(booking_state["show_id"])
         if not seats:
             return "No seats found"
         return seats
@@ -278,7 +283,7 @@ def select_seats(seat_ids:list[int]):
         Returns:
         Confirmation that the selected seats have been stored in the booking state.
         """
-    decision_history["seat_ids"] = seat_ids
+    booking_state["seat_ids"] = seat_ids
     return {
         "status": "success",
         "selected_seats": seat_ids
@@ -312,15 +317,15 @@ def book_movie_tickets():
     """
     try:
         req: BookingRequest = BookingRequest(
-            user_id=decision_history["user_id"],
-            show_id=decision_history["show_id"],
-            seat_ids=decision_history["seat_ids"],
+            user_id=booking_state["user_id"],
+            show_id=booking_state["show_id"],
+            seat_ids=booking_state["seat_ids"],
             payment_method="UPI"
         )
         booking_resp = book_tickets(req)
         if booking_resp is None:
             return "Sorry, tickets couldn't be booked"
-        decision_history["booking_id"] = booking_resp["booking_id"]
+        booking_state["booking_ids"] = booking_state["booking_ids"].append(booking_resp["booking_id"])
         return booking_resp
     except Exception:
         return "Sorry, I couldn't reach the booking service right now."
@@ -350,6 +355,35 @@ def book_human_approval(request,handler):
     return handler(request)
 
 @tool
+def store_booking_ids(booking_id:int):
+    """
+        Purpose:
+        Store the user's booking ids in the current booking state.
+
+        Requirements:
+        - A movie must already be selected.
+        - A theatre must already be selected.
+        - A show must already be selected.
+        - The user must have explicitly selected or confirmed one or more available seats.
+        - User must have booked movie tickets
+
+        When to call:
+        - After user has suceessfully booked tickets
+
+        Do not call:
+        - Before a ticket has been booked.
+        - If the user has not yet finalized their booking.
+
+        Returns:
+        Confirmation that the booking ids have been stored in the booking state.
+        """
+    booking_state["booking_ids"].append(booking_id)
+    return {
+        "status": "success",
+        "booking_ids": booking_state["booking_ids"]
+    }
+
+@tool
 def get_booked_tickets():
     """
     Purpose:
@@ -368,11 +402,11 @@ def get_booked_tickets():
     - If no booking ID is available.
 
     Returns:
-    A list of tickets for the current booking, including the seat details,
-    show information, and other relevant ticket information.
+    A list of tickets for the current booking, including details like booking id, Movie, Theatre, Show time,
+    seat(Row+Seat number), transaction id
     """
     try:
-        tickets = get_tickets(decision_history["booking_id"])
+        tickets = get_tickets(booking_state["booking_id"])
         if tickets is None:
             return "No tickets found"
         return tickets
